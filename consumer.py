@@ -36,11 +36,12 @@ class OrderProcessor:
     def generate_ui(self):
         LEFT_W = 34
         RIGHT_W = 34
+        COL_W = 14
         GAP = 4
 
         stats = Table(show_header=False, box=None, pad_edge=False)
-        stats.add_column(justify="left", width=LEFT_W - 14)
-        stats.add_column(justify="right", width=14, no_wrap=True)
+        stats.add_column(justify="left", width=LEFT_W - COL_W)
+        stats.add_column(justify="right", width=COL_W, no_wrap=True)
 
         stats.add_row("Total Orders", f"[bold cyan]{self.order_count}[/]")
         stats.add_row("Total Revenue", f"[bold green]${self.total_revenue:,.2f}[/]")
@@ -51,8 +52,8 @@ class OrderProcessor:
             pad_edge=False,
             expand=False
         )
-        activity.add_column("User", style="magenta", no_wrap=True, width=14)
-        activity.add_column("Amount", justify="right", style="green", no_wrap=True, width=14)
+        activity.add_column("User", style="magenta", no_wrap=True, width=COL_W)
+        activity.add_column("Amount", justify="right", style="green", no_wrap=True, width=COL_W)
 
         for user, amount in self.last_orders:
             activity.add_row(user, amount)
