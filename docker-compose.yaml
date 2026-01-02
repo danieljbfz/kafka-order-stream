@@ -1,0 +1,138 @@
+volumes:
+  kafka1-data:
+    driver: local
+  kafka2-data:
+    driver: local
+  kafka3-data:
+    driver: local
+
+networks:
+  kafka-internal:
+    driver: bridge
+
+services:
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-cluster-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:19092 # kafka1:9092,kafka2:9092,kafka3:9092
+    depends_on:
+      - kafka1
+      # - kafka2
+      # - kafka3
+    networks:
+      - kafka-internal
+
+  kafka1:
+    image: confluentinc/cp-kafka:8.1.1
+    hostname: kafka1
+    container_name: kafka1
+    ports:
+      - "9092:9092"   # Client traffic (host-to-container)
+      - "9093:9093"   # Controller traffic (KRaft voting)
+    
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+
+      # INTERNAL    =>  for inter-broker communication within Docker (docker-to-docker)
+      # EXTERNAL    =>  for clients connecting from outside Docker (docker-to-host)
+      # CONTROLLER  =>  for the KRaft controller
+
+      # Logical mapping of listener names to security protocols
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT'
+
+      # Defines the ports Kafka listens on internally (19092=Docker, 9092=Host, 9093=Controller)
+      KAFKA_LISTENERS: 'INTERNAL://:19092,EXTERNAL://:9092,CONTROLLER://:9093'
+
+      # Defines the addresses Kafka advertises to clients
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka1:19092,EXTERNAL://localhost:9092'
+
+      # Defines the listener used for internal data sync (replication) between brokers
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+
+      # Defines the listener used for KRaft elections and cluster management
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+
+      # The list of nodes that vote in the KRaft quorum
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093' # 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+
+      # Unique identifier for the Kafka cluster (should be the same for all brokers)
+      CLUSTER_ID: 'PCNX7OTIQLyXoDiYmfMgiA'
+
+      # Number of replicas for the internal consumer-offsets topic
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 # 3
+
+      # Number of replicas for the internal transaction-state topic
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1 # 3
+
+      # Number of replicas that must be in sync to commit a transaction
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1 # 2
+
+      # Location of the Kafka log data (messages, offsets, partitions)
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data' 
+
+    volumes:
+      - kafka1-data:/var/lib/kafka/data
+    networks:
+      - kafka-internal
+
+  # To add kafka2 and kafka3, copy the kafka1 block and increment the following:
+  # 1. container_name/hostname (kafka2, kafka3)
+  # 2. External Ports (e.g., 9094:9092, 9096:9092)
+  # 3. KAFKA_NODE_ID (2, 3)
+  # 4. KAFKA_ADVERTISED_LISTENERS (EXTERNAL://localhost:9094, etc.)
+  # 6. Volume path (./data/kafka2, etc.)
+
+  # kafka2:
+  #   image: confluentinc/cp-kafka:8.1.1
+  #   hostname: kafka2
+  #   container_name: kafka2
+  #   ports:
+  #     - "9094:9092"
+  #     - "9095:9093"
+  #   environment:
+  #     KAFKA_NODE_ID: 2
+  #     KAFKA_PROCESS_ROLES: 'broker,controller'
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT'
+  #     KAFKA_LISTENERS: 'INTERNAL://:19092,EXTERNAL://:9092,CONTROLLER://:9093'
+  #     KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka2:19092,EXTERNAL://localhost:9094'
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+  #     KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+  #     KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093,2@kafka2:9093,3@kafka3:9093'
+  #     CLUSTER_ID: 'PCNX7OTIQLyXoDiYmfMgiA'
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+  #     KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+  #     KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+  #   volumes:
+  #     - kafka2-data:/var/lib/kafka/data
+  #   networks:
+  #     - kafka-internal
+
+  # kafka3:
+  #   image: confluentinc/cp-kafka:8.1.1
+  #   hostname: kafka3
+  #   container_name: kafka3
+  #   ports:
+  #     - "9096:9092"
+  #     - "9097:9093"
+  #   environment:
+  #     KAFKA_NODE_ID: 3
+  #     KAFKA_PROCESS_ROLES: 'broker,controller'
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT'
+  #     KAFKA_LISTENERS: 'INTERNAL://:19092,EXTERNAL://:9092,CONTROLLER://:9093'
+  #     KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka3:19092,EXTERNAL://localhost:9096'
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+  #     KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+  #     KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093,2@kafka2:9093,3@kafka3:9093'
+  #     CLUSTER_ID: 'PCNX7OTIQLyXoDiYmfMgiA'
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+  #     KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+  #     KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+  #   volumes:
+  #     - kafka3-data:/var/lib/kafka/data
+  #   networks:
+  #     - kafka-internal

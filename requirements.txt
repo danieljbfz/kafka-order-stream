@@ -1,0 +1,2 @@
+confluent-kafka==2.12.2
+rich==14.2.0
